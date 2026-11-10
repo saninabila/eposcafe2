@@ -1,0 +1,13 @@
+{
+  "name": "epos-cafe",
+  "version": "1.0.0",
+  "description": "Aplikasi EPOS Cafe sederhana dengan Node.js dan Firebase",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "firebase-admin": "^12.1.0"
+  }
+}

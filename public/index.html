@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EPOS Cafe Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-amber-50 text-stone-800 min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="bg-amber-900 text-amber-100 p-4 shadow-md flex justify-between items-center">
+    <h1 class="text-xl font-bold tracking-wide">☕ EPOS Cafe Kasir</h1>
+    <span class="text-xs bg-amber-800 px-3 py-1 rounded-full text-amber-200">Status: Online</span>
+  </header>
+
+  <!-- Main Content -->
+  <div class="flex-1 max-w-7xl w-full mx-auto p-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+    
+    <!-- Kolom Katalog Menu -->
+    <div class="md:col-span-2 space-y-4">
+      <h2 class="text-lg font-semibold border-b border-amber-200 pb-2">Katalog Menu</h2>
+      <div id="menu-container" class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <!-- Menu card dummy / diisi via JS -->
+      </div>
+    </div>
+
+    <!-- Kolom Ringkasan Pesanan -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-amber-100 flex flex-col justify-between">
+      <div>
+        <h2 class="text-lg font-semibold border-b border-stone-200 pb-2 mb-4">Ringkasan Pesanan</h2>
+        
+        <div class="mb-4">
+          <label class="block text-xs font-medium text-stone-500 mb-1">Nama Pelanggan</label>
+          <input type="text" id="customer-name" placeholder="Contoh: Budi" class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-700">
+        </div>
+
+        <!-- List Keranjang -->
+        <div id="cart-list" class="space-y-3 max-h-60 overflow-y-auto pr-1">
+          <p class="text-xs text-stone-400 text-center py-4">Belum ada item dipilih.</p>
+        </div>
+      </div>
+
+      <!-- Total & Checkout -->
+      <div class="border-t border-stone-200 pt-4 mt-4 space-y-3">
+        <div class="flex justify-between font-bold text-stone-800 text-base">
+          <span>Total</span>
+          <span id="total-price">Rp 0</span>
+        </div>
+
+        <button onclick="processCheckout()" class="w-full bg-amber-800 hover:bg-amber-900 text-white font-semibold py-3 rounded-xl transition duration-200">
+          Proses Transaksi
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Data dummy menu awal (jika Firestore belum diisi)
+    const dummyMenu = [
+      { id: '1', name: 'Espresso', price: 18000 },
+      { id: '2', name: 'Caffè Latte', price: 24000 },
+      { id: '3', name: 'Cappuccino', price: 24000 },
+      { id: '4', name: 'Croissant Cokelat', price: 22000 },
+      { id: '5', name: 'Iced Matcha', price: 26000 },
+      { id: '6', name: 'Red Velvet Cake', price: 28000 }
+    ];
+
+    let cart = [];
+
+    function renderMenu() {
+      const container = document.getElementById('menu-container');
+      container.innerHTML = dummyMenu.map(item => `
+        <div onclick="addToCart('${item.id}', '${item.name}', ${item.price})" class="bg-white p-4 rounded-xl shadow-xs border border-amber-100 hover:border-amber-400 cursor-pointer transition transform active:scale-95">
+          <h3 class="font-semibold text-stone-800 text-sm">${item.name}</h3>
+          <p class="text-amber-800 text-xs font-bold mt-2">Rp ${item.price.toLocaleString('id-ID')}</p>
+        </div>
+      `).join('');
+    }
+
+    function addToCart(id, name, price) {
+      const existing = cart.find(item => item.id === id);
+      if (existing) {
+        existing.qty += 1;
+      } else {
+        cart.push({ id, name, price, qty: 1 });
+      }
+      renderCart();
+    }
+
+    function renderCart() {
+      const cartContainer = document.getElementById('cart-list');
+      const totalContainer = document.getElementById('total-price');
+
+      if (cart.length === 0) {
+        cartContainer.innerHTML = '<p class="text-xs text-stone-400 text-center py-4">Belum ada item dipilih.</p>';
+        totalContainer.innerText = 'Rp 0';
+        return;
+      }
+
+      let total = 0;
+      cartContainer.innerHTML = cart.map(item => {
+        const itemTotal = item.price * item.qty;
+        total += itemTotal;
+        return `
+          <div class="flex justify-between items-center text-xs">
+            <div>
+              <p class="font-medium text-stone-700">${item.name}</p>
+              <p class="text-stone-400">Rp ${item.price.toLocaleString('id-ID')} x ${item.qty}</p>
+            </div>
+            <span class="font-bold text-stone-800">Rp ${itemTotal.toLocaleString('id-ID')}</span>
+          </div>
+        `;
+      }).join('');
+
+      totalContainer.innerText = `Rp ${total.toLocaleString('id-ID')}`;
+    }
+
+    async function processCheckout() {
+      if (cart.length === 0) return alert('Keranjang masih kosong!');
+
+      const customerName = document.getElementById('customer-name').value;
+      const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+      const payload = {
+        customerName: customerName || 'Pelanggan Umum',
+        items: cart,
+        totalAmount,
+        paymentMethod: 'Cash'
+      };
+
+      try {
+        const response = await fetch('/api/transactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const raw = await response.text();
+        let resData = null;
+        try { resData = JSON.parse(raw); } catch (e) { resData = null; }
+        if (!response.ok || !resData) {
+          throw new Error('HTTP ' + response.status + ' - ' + raw.slice(0, 200));
+        }
+        
+        if (resData.status === 'success') {
+          alert('Transaksi Berhasil! ID: ' + resData.id);
+          cart = [];
+          document.getElementById('customer-name').value = '';
+          renderCart();
+        } else {
+          alert('Gagal: ' + resData.message);
+        }
+      } catch (err) {
+        alert('Gagal memproses transaksi. ' + (err && err.message ? err.message : err));
+      }
+    }
+
+    renderMenu();
+  </script>
+</body>
+</html>

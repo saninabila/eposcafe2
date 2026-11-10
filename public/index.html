@@ -3,160 +3,171 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EPOS Cafe Dashboard</title>
+  <title>EPOS Cafe</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-amber-50 text-stone-800 min-h-screen flex flex-col">
-
-  <!-- Header -->
-  <header class="bg-amber-900 text-amber-100 p-4 shadow-md flex justify-between items-center">
-    <h1 class="text-xl font-bold tracking-wide">☕ EPOS Cafe Kasir</h1>
-    <span class="text-xs bg-amber-800 px-3 py-1 rounded-full text-amber-200">Status: Online</span>
+<body class="bg-amber-50 text-stone-800 font-sans min-h-screen">
+  <header class="bg-amber-900 text-amber-100 p-4 shadow-md">
+    <div class="container mx-auto flex justify-between items-center">
+      <h1 class="text-2xl font-bold tracking-wide">☕ Cafe POS System</h1>
+      <span class="text-sm font-medium opacity-80">Vercel & Firestore Ready</span>
+    </div>
   </header>
 
-  <!-- Main Content -->
-  <div class="flex-1 max-w-7xl w-full mx-auto p-4 grid grid-cols-1 md:grid-cols-3 gap-6">
-    
-    <!-- Kolom Katalog Menu -->
-    <div class="md:col-span-2 space-y-4">
-      <h2 class="text-lg font-semibold border-b border-amber-200 pb-2">Katalog Menu</h2>
-      <div id="menu-container" class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <!-- Menu card dummy / diisi via JS -->
-      </div>
-    </div>
-
-    <!-- Kolom Ringkasan Pesanan -->
-    <div class="bg-white p-5 rounded-2xl shadow-sm border border-amber-100 flex flex-col justify-between">
-      <div>
-        <h2 class="text-lg font-semibold border-b border-stone-200 pb-2 mb-4">Ringkasan Pesanan</h2>
-        
-        <div class="mb-4">
-          <label class="block text-xs font-medium text-stone-500 mb-1">Nama Pelanggan</label>
-          <input type="text" id="customer-name" placeholder="Contoh: Budi" class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-700">
-        </div>
-
-        <!-- List Keranjang -->
-        <div id="cart-list" class="space-y-3 max-h-60 overflow-y-auto pr-1">
-          <p class="text-xs text-stone-400 text-center py-4">Belum ada item dipilih.</p>
-        </div>
-      </div>
-
-      <!-- Total & Checkout -->
-      <div class="border-t border-stone-200 pt-4 mt-4 space-y-3">
-        <div class="flex justify-between font-bold text-stone-800 text-base">
-          <span>Total</span>
-          <span id="total-price">Rp 0</span>
-        </div>
-
-        <button onclick="processCheckout()" class="w-full bg-amber-800 hover:bg-amber-900 text-white font-semibold py-3 rounded-xl transition duration-200">
-          Proses Transaksi
+  <main class="container mx-auto p-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- Kolom 1 & 2: Daftar Menu -->
+    <section class="md:col-span-2 space-y-4">
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-amber-100 flex justify-between items-center">
+        <h2 class="text-xl font-bold text-amber-900">Daftar Menu</h2>
+        <button onclick="toggleModal(true)" class="bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded-lg text-sm transition">
+          + Tambah Menu
         </button>
       </div>
-    </div>
 
+      <div id="menu-container" class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <!-- Card menu di-render via JavaScript -->
+      </div>
+    </section>
+
+    <!-- Kolom 3: Struk / Pesanan -->
+    <section class="bg-white p-5 rounded-xl shadow-sm border border-amber-100 flex flex-col justify-between h-[80vh]">
+      <div>
+        <h2 class="text-xl font-bold text-amber-900 mb-4 border-b pb-2">Pesanan Saat Ini</h2>
+        <div id="cart-items" class="space-y-3 overflow-y-auto max-h-[50vh] pr-1">
+          <p class="text-stone-400 text-sm text-center py-8">Belum ada item dipilih.</p>
+        </div>
+      </div>
+
+      <div class="border-t pt-4 space-y-3">
+        <div class="flex justify-between items-center text-lg font-bold">
+          <span>Total:</span>
+          <span id="cart-total" class="text-amber-900">Rp 0</span>
+        </div>
+        <button onclick="checkout()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg shadow transition">
+          Proses Pembayaran
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal Tambah Menu -->
+  <div id="modal-menu" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-xl w-full max-w-md space-y-4">
+      <h3 class="text-lg font-bold text-stone-800">Tambah Menu Baru</h3>
+      <form id="form-menu" onsubmit="addMenu(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold uppercase text-stone-500 mb-1">Nama Menu</label>
+          <input type="text" id="menu-name" required class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-amber-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase text-stone-500 mb-1">Harga (Rp)</label>
+          <input type="number" id="menu-price" required class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-amber-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase text-stone-500 mb-1">Kategori</label>
+          <input type="text" id="menu-category" placeholder="Minuman/Makanan" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-amber-500 outline-none">
+        </div>
+        <div class="flex justify-end space-x-2 pt-2">
+          <button type="button" onclick="toggleModal(false)" class="px-4 py-2 border rounded-lg text-stone-600 hover:bg-stone-50">Batal</button>
+          <button type="submit" class="px-4 py-2 bg-amber-800 text-white rounded-lg hover:bg-amber-900">Simpan</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <script>
-    // Data dummy menu awal (jika Firestore belum diisi)
-    const dummyMenu = [
-      { id: '1', name: 'Espresso', price: 18000 },
-      { id: '2', name: 'Caffè Latte', price: 24000 },
-      { id: '3', name: 'Cappuccino', price: 24000 },
-      { id: '4', name: 'Croissant Cokelat', price: 22000 },
-      { id: '5', name: 'Iced Matcha', price: 26000 },
-      { id: '6', name: 'Red Velvet Cake', price: 28000 }
-    ];
-
     let cart = [];
 
-    function renderMenu() {
+    async function loadMenu() {
+      const res = await fetch('/api/menu');
+      const data = await res.json();
       const container = document.getElementById('menu-container');
-      container.innerHTML = dummyMenu.map(item => `
-        <div onclick="addToCart('${item.id}', '${item.name}', ${item.price})" class="bg-white p-4 rounded-xl shadow-xs border border-amber-100 hover:border-amber-400 cursor-pointer transition transform active:scale-95">
-          <h3 class="font-semibold text-stone-800 text-sm">${item.name}</h3>
-          <p class="text-amber-800 text-xs font-bold mt-2">Rp ${item.price.toLocaleString('id-ID')}</p>
+      container.innerHTML = data.map(item => `
+        <div onclick='addToCart(${JSON.stringify(item)})' class="bg-white border border-amber-100 p-4 rounded-xl cursor-pointer hover:border-amber-400 hover:shadow-md transition">
+          <span class="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium">${item.category}</span>
+          <h3 class="font-bold text-stone-800 mt-2">${item.name}</h3>
+          <p class="text-amber-900 font-semibold text-sm mt-1">Rp ${item.price.toLocaleString('id-ID')}</p>
         </div>
       `).join('');
     }
 
-    function addToCart(id, name, price) {
-      const existing = cart.find(item => item.id === id);
+    function addToCart(item) {
+      const existing = cart.find(c => c.id === item.id);
       if (existing) {
-        existing.qty += 1;
+        existing.qty++;
       } else {
-        cart.push({ id, name, price, qty: 1 });
+        cart.push({ ...item, qty: 1 });
       }
       renderCart();
     }
 
     function renderCart() {
-      const cartContainer = document.getElementById('cart-list');
-      const totalContainer = document.getElementById('total-price');
-
+      const container = document.getElementById('cart-items');
       if (cart.length === 0) {
-        cartContainer.innerHTML = '<p class="text-xs text-stone-400 text-center py-4">Belum ada item dipilih.</p>';
-        totalContainer.innerText = 'Rp 0';
+        container.innerHTML = '<p class="text-stone-400 text-sm text-center py-8">Belum ada item dipilih.</p>';
+        document.getElementById('cart-total').innerText = 'Rp 0';
         return;
       }
 
       let total = 0;
-      cartContainer.innerHTML = cart.map(item => {
+      container.innerHTML = cart.map(item => {
         const itemTotal = item.price * item.qty;
         total += itemTotal;
         return `
-          <div class="flex justify-between items-center text-xs">
+          <div class="flex justify-between items-center bg-stone-50 p-2.5 rounded-lg border">
             <div>
-              <p class="font-medium text-stone-700">${item.name}</p>
-              <p class="text-stone-400">Rp ${item.price.toLocaleString('id-ID')} x ${item.qty}</p>
+              <p class="font-semibold text-sm text-stone-800">${item.name}</p>
+              <p class="text-xs text-stone-500">${item.qty} x Rp ${item.price.toLocaleString('id-ID')}</p>
             </div>
-            <span class="font-bold text-stone-800">Rp ${itemTotal.toLocaleString('id-ID')}</span>
+            <span class="font-bold text-sm text-stone-700">Rp ${itemTotal.toLocaleString('id-ID')}</span>
           </div>
         `;
       }).join('');
 
-      totalContainer.innerText = `Rp ${total.toLocaleString('id-ID')}`;
+      document.getElementById('cart-total').innerText = `Rp ${total.toLocaleString('id-ID')}`;
     }
 
-    async function processCheckout() {
+    async function checkout() {
       if (cart.length === 0) return alert('Keranjang masih kosong!');
-
-      const customerName = document.getElementById('customer-name').value;
       const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
 
-      const payload = {
-        customerName: customerName || 'Pelanggan Umum',
-        items: cart,
-        totalAmount,
-        paymentMethod: 'Cash'
-      };
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: cart, totalAmount, paymentMethod: 'Cash' })
+      });
 
-      try {
-        const response = await fetch('/api/transactions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const raw = await response.text();
-        let resData = null;
-        try { resData = JSON.parse(raw); } catch (e) { resData = null; }
-        if (!response.ok || !resData) {
-          throw new Error('HTTP ' + response.status + ' - ' + raw.slice(0, 200));
-        }
-        
-        if (resData.status === 'success') {
-          alert('Transaksi Berhasil! ID: ' + resData.id);
-          cart = [];
-          document.getElementById('customer-name').value = '';
-          renderCart();
-        } else {
-          alert('Gagal: ' + resData.message);
-        }
-      } catch (err) {
-        alert('Gagal memproses transaksi. ' + (err && err.message ? err.message : err));
+      if (res.ok) {
+        alert('Transaksi berhasil disimpan!');
+        cart = [];
+        renderCart();
+      } else {
+        alert('Gagal memproses transaksi.');
       }
     }
 
-    renderMenu();
+    function toggleModal(show) {
+      document.getElementById('modal-menu').classList.toggle('hidden', !show);
+    }
+
+    async function addMenu(e) {
+      e.preventDefault();
+      const name = document.getElementById('menu-name').value;
+      const price = document.getElementById('menu-price').value;
+      const category = document.getElementById('menu-category').value;
+
+      await fetch('/api/menu', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, price, category })
+      });
+
+      document.getElementById('form-menu').reset();
+      toggleModal(false);
+      loadMenu();
+    }
+
+    loadMenu();
   </script>
 </body>
 </html>

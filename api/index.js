@@ -1,82 +1,74 @@
+require('dotenv').config();
 const express = require('express');
 const admin = require('firebase-admin');
-const path = require('path');
 
 const app = express();
 app.use(express.json());
 
-// public/ berada di root project. Di Vercel file ini ada di <root>/api,
-// jadi naik satu level. Saat dijalankan lokal hasilnya sama.
-const PUBLIC_DIR = path.join(__dirname, '..', 'public');
-app.use(express.static(PUBLIC_DIR));
-
-// Inisialisasi Firebase Admin dengan Environment Variable
-let db = null;
-try {
-  if (!admin.apps.length) {
+// Inisialisasi Firebase Admin SDK dari Environment Variable
+if (!admin.apps.length) {
+  try {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
     });
-    console.log('Firebase Admin berhasil diinisialisasi.');
+  } catch (error) {
+    console.error('Gagal menginisialisasi Firebase Admin:', error.message);
   }
-  db = admin.firestore();
-} catch (error) {
-  console.error('Gagal menginisialisasi Firebase Admin:', error.message);
 }
 
-function firebaseReady(res) {
-  if (db) return true;
-  res.status(500).json({
-    status: 'error',
-    message: 'Firebase belum dikonfigurasi. Set environment variable FIREBASE_SERVICE_ACCOUNT.'
-  });
-  return false;
-}
+const db = admin.firestore();
 
-// API: Ambil Menu Kafe
-async function getMenu(req, res) {
-  if (!firebaseReady(res)) return;
+// API: Ambil semua menu
+app.get('/api/menu', async (req, res) => {
   try {
     const snapshot = await db.collection('menu').get();
     const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    res.json({ status: 'success', data: items });
+    res.json(items);
   } catch (error) {
-    res.status(500).json({ status: 'error', message: error.message });
+    res.status(500).json({ error: error.message });
   }
-}
+});
 
-// API: Simpan Transaksi Baru
-async function createTransaction(req, res) {
-  if (!firebaseReady(res)) return;
+// API: Tambah menu baru
+app.post('/api/menu', async (req, res) => {
   try {
-    const { items, totalAmount, paymentMethod, customerName } = req.body;
+    const { name, price, category } = req.body;
+    const docRef = await db.collection('menu').add({
+      name,
+      price: Number(price),
+      category: category || 'Umum',
+      createdAt: new Date().toISOString()
+    });
+    res.status(201).json({ id: docRef.id, name, price, category });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-    const newTransaction = {
-      customerName: customerName || 'Pelanggan',
+// API: Simpan transaksi pesanan
+app.post('/api/orders', async (req, res) => {
+  try {
+    const { items, totalAmount, paymentMethod } = req.body;
+    const orderData = {
       items,
       totalAmount,
       paymentMethod,
-      createdAt: admin.firestore.FieldValue.serverTimestamp()
+      createdAt: new Date().toISOString()
     };
-
-    const docRef = await db.collection('transactions').add(newTransaction);
-    res.status(201).json({ status: 'success', id: docRef.id, message: 'Transaksi berhasil disimpan!' });
+    const docRef = await db.collection('orders').add(orderData);
+    res.status(201).json({ id: docRef.id, status: 'Success' });
   } catch (error) {
-    res.status(500).json({ status: 'error', message: error.message });
+    res.status(500).json({ error: error.message });
   }
-}
-
-// Terdaftar dengan dan tanpa prefix /api, supaya tetap jalan baik di Vercel
-// (rewrite meneruskan path asli) maupun saat dijalankan lokal.
-app.get('/api/menu', getMenu);
-app.post('/api/transactions', createTransaction);
-app.get('/menu', getMenu);
-app.post('/transactions', createTransaction);
-
-// Halaman utama
-app.get('/', (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
+
+// Jalankan server lokal (opsional untuk dev)
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server berjalan di http://localhost:${PORT}`);
+  });
+}
 
 module.exports = app;
